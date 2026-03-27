@@ -1,174 +1,180 @@
-# 🚀 Private Reverse Proxy & Smart DNS Core
+# 🚀 私有反代与智能 DNS 调度核心
 
-> 基于 **Cloudflare Workers + D1 + DNS API** 构建的 Serverless 私有反代与智能调度核心  
-> 集成 **优选 IP 抓取 / 本地测速 / DNS 自动调度 / 反向代理管理**
-
----
-
-![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white)
-![D1](https://img.shields.io/badge/Database-D1-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
-
----
-
-# 🧠 系统架构
-
-```
-                ┌──────────────────────┐
-                │   User Browser (UI)  │
-                │  (测速 / 管理面板)     │
-                └─────────┬────────────┘
-                          │
-                          ▼
-               ┌──────────────────────┐
-               │  Cloudflare Worker   │
-               │  (核心控制逻辑层)      │
-               └───────┬─────┬────────┘
-                       │     │
-        ┌──────────────┘     └──────────────┐
-        ▼                                   ▼
-┌──────────────────┐              ┌────────────────────┐
-│   D1 Database     │              │ Cloudflare DNS API │
-│ (节点/配置存储)     │              │ (自动写入 A/AAAA)   │
-└──────────────────┘              └────────────────────┘
-                       │
-                       ▼
-             ┌──────────────────┐
-             │ Reverse Proxy     │
-             │ (动态转发流量)      │
-             └──────────────────┘
-```
+基于 **Cloudflare Workers** 构建的轻量级 Serverless 私有核心面板。  
+集成 **动态反向代理管理 + 优选 IP 抓取 + 本地测速 + 自动 DNS 调度** 于一体，  
+同时完美适配 **移动端 & PC 端** 使用。
 
 ---
 
 # ✨ 核心功能
 
-### 🛡️ 安全鉴权
-- Token 登录保护
-- 无账号系统，轻量安全
+🛡️ **安全鉴权登录**  
+使用 Token 保护控制面板访问。
 
-### 🌐 优选 IP 抓取 + 本地测速
-- 支持：电信 / 联通 / 移动 / 多线 / IPv6
-- 浏览器本地真实延迟测试
+🌐 **优选节点抓取与测速**
 
-### ☁️ 智能 DNS 调度
+- 一键抓取全网优选 IP（电信 / 联通 / 移动 / 多线 / IPv6）
+- 基于本地浏览器进行真实延迟与可用性测试
+
+☁️ **智能 DNS 调度**
+
 - 自动筛选最快节点
-- 一键写入 Cloudflare DNS
-- 支持 A / AAAA 记录
+- 一键写入 **Top 3 IP → Cloudflare DNS（A / AAAA）**
 
-### 🔗 动态反向代理
-- 路径前缀映射
-- 多级安全策略：
-  - IP 隐藏
+🔗 **动态反向代理**
+
+- 支持路径前缀映射
+- 支持多种安全模式：
+  - IP 抹除
   - 严格透传
   - 双重透传
 
-### 📱 移动端优化
-- 自适应 UI
-- 防缩放
-- 类原生体验
+📱 **移动端优化**
+
+- 防缩放设计
+- 自适应布局
+- 接近原生 App 使用体验
 
 ---
 
-# 📊 工作流程
+# 🛠️ 部署前准备
 
-```
-抓取 IP → 本地测速 → 排序 → 选出 Top3 → 写入 DNS → 用户访问 → 自动调度
-```
+请准备：
 
----
-
-# 🛠️ 部署准备
-
-- Cloudflare 账号
-- 已接入 Cloudflare 的域名
+- 一个 **Cloudflare 账号**
+- 一个托管在 Cloudflare 的 **域名**
 
 ---
 
-# 📦 部署步骤
+# 📦 部署步骤 / Deployment Steps
 
-## 1️⃣ 创建 D1 数据库
+## 第一步：创建 D1 数据库
+
+进入：
 
 ```
-Storage & Databases → D1 → Create
+Storage & Databases → D1
 ```
 
-示例：
+创建数据库，例如：
 
 ```
 proxy_db
 ```
 
+📌 说明：
+
+- 系统会自动建表
+- 无需手动编写 SQL
+
 ---
 
-## 2️⃣ 创建 Worker
+## 第二步：创建 Worker
+
+进入：
 
 ```
-Workers & Pages → Create Worker
+Workers & Pages → Create Application → Create Worker
 ```
 
-示例：
+创建 Worker，例如：
 
 ```
 dns-proxy-core
 ```
 
-部署后：
+然后：
 
-- 编辑代码
-- 覆盖 `worker.js`
-- 点击 Deploy
+1. 点击 `Edit Code`
+2. 用项目代码 **完全覆盖默认代码**
+3. 点击 `Deploy`
 
 ---
 
-## 3️⃣ 绑定数据库
+## 第三步：绑定 D1 数据库
+
+进入：
 
 ```
-Settings → Bindings → Add D1
+Settings → Variables and Secrets → Bindings
 ```
 
-| 变量名 | 值 |
+添加 D1 绑定：
+
+| 变量名 | 数据库 |
 |---|---|
 | DB | proxy_db |
 
----
+⚠️ 必须使用变量名：
 
-## 4️⃣ 环境变量
+```
+DB
+```
 
-| 变量名 | 说明 |
-|---|---|
-| ADMIN_TOKEN | 登录密码 |
-| CF_ZONE_ID | Cloudflare Zone ID |
-| CF_DOMAIN | 调度域名 |
-| CF_API_TOKEN | DNS API Token |
+否则代码无法运行。
 
 ---
 
-# 🔑 API Token 获取
+## 第四步：配置环境变量（必需）
 
-路径：
+进入：
 
 ```
-Profile → API Tokens → Create Token
+Variables and Secrets → Environment Variables
 ```
 
-选择模板：
+添加以下变量：
+
+| 变量名 | 说明 | 示例 |
+|---|---|---|
+| ADMIN_TOKEN | 面板登录密码 | MySecretPassword123! |
+| CF_ZONE_ID | Cloudflare 区域 ID | 023e105f4ecef8ad9ca... |
+| CF_DOMAIN | 需要调度的子域名 | emby.yourdomain.com |
+| CF_API_TOKEN | Cloudflare API Token | vA_mXYZ... |
+
+保存后点击：
+
+```
+Deploy
+```
+
+---
+
+## 🔑 获取 CF_API_TOKEN
+
+步骤：
+
+1. 进入 Cloudflare 控制台
+2. 点击头像 → **My Profile**
+3. 进入 **API Tokens**
+4. 点击 **Create Token**
+5. 选择模板：
 
 ```
 Edit zone DNS
 ```
 
-权限：
+6. 设置权限：
 
 ```
 Zone → DNS → Edit
 ```
 
+7. 选择：
+
+```
+Specific zone → 你的域名
+```
+
+生成并复制 Token。
+
 ---
 
 # 🎮 使用方法
 
-## 登录
+## 登录面板
+
+访问：
 
 ```
 https://你的Worker域名
@@ -184,100 +190,94 @@ ADMIN_TOKEN
 
 ## 🌐 节点测速
 
-1. 获取节点
-2. 本地测速
-3. 点击：
+1. 选择线路类型
+2. 点击：
+
+```
+获取节点并测速
+```
+
+3. 等待测速完成
+4. 点击：
 
 ```
 更新 TOP3 至 DNS
 ```
 
----
+系统会自动：
 
-## 🔗 添加反代
-
-输入：
-
-```
-路径: /api
-后端: http://1.1.1.1:8080
-```
-
-访问：
-
-```
-https://域名/api
-```
+- 选择最快 3 个 IP
+- 写入 Cloudflare DNS
 
 ---
 
-# 📁 项目结构（推荐）
+## 🔗 部署反代节点
+
+填写：
+
+- 路径前缀（例如：`api`）
+- 后端地址（例如：`http://1.1.1.1:8080`）
+
+访问方式：
 
 ```
-.
-├── worker.js
-├── README.md
-├── assets/
-│   ├── ui-preview.png
-│   └── architecture.png
+https://你的域名/api
 ```
 
----
+等同于访问：
 
-# 🎯 使用场景
-
-- 🌍 流媒体加速（Emby / Plex）
-- 🚀 代理节点调度
-- 🌐 海外服务优化
-- 🧠 智能 DNS 分流
-- 🔐 私有反代网关
+```
+http://1.1.1.1:8080
+```
 
 ---
 
 # ⚠️ 注意事项
 
-### 🔐 安全
+## 🔐 安全
 
-请保护：
+请妥善保管：
 
-- ADMIN_TOKEN
-- CF_API_TOKEN
+- `ADMIN_TOKEN`
+- `CF_API_TOKEN`
 
 ---
 
-### ❗ DNS 覆盖风险
+## ⚠️ DNS 覆盖警告
 
-操作会：
+执行以下操作时：
 
-- 删除所有 A/AAAA
-- 写入新记录
+- 更新 DNS
+- 设为唯一解析
 
-⚠️ 请务必使用：
+系统会：
+
+👉 删除该域名下所有 A / AAAA 记录  
+👉 写入新的 IP
+
+❗ 强烈建议：
+
+- 仅使用 **子域名**
+- **不要使用主域名（根域名）**
+
+否则可能导致网站宕机。
+
+---
+
+## 📡 测速说明
+
+测速基于：
 
 ```
-子域名（如 emby.xxx.com）
+浏览器本地请求（Web API）
 ```
 
-不要使用主域名！
+因此结果会受到：
 
----
+- 当前网络环境
+- 浏览器性能
 
-### 📡 测速说明
-
-测速基于浏览器环境：
-
-- 受网络影响
-- 非服务器级精度
-
----
-
-# 🚀 未来规划
-
-- [ ] 自动定时调度（Cron）
-- [ ] 节点健康检测
-- [ ] 多区域 DNS 策略
-- [ ] UI 可视化图表
-- [ ] 多用户系统
+的影响。
 
 ---
 
